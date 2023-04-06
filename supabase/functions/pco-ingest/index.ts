@@ -18,7 +18,7 @@ serve(async (req) => {
       }),
       { headers: { "Content-Type": "application/json" } },
     )
-  }
+  }￼
 
   // TODO: connect to PCO API.
 
