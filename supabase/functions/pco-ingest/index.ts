@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 serve(async (req) => {
   const { data } = await req.json()
   const user = data.user;
+  const event = null;
   
   // Makes sure the info I need exists.
   if (!user) {
