@@ -5,19 +5,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 serve(async (req) => {
-  const { data } = await req.json()
-  const user = data.user;
-  
-  // Makes sure the info I need exists.
-  if (!user) {
-    return new Response(
-      JSON.stringify({
-        status: 400,
-        message: 'User object not found in request.'
-      }),
-      { headers: { "Content-Type": "application/json" } },
-    )
-  }
+    const { data } = await req.json()
+    const user = data['user'];
+
+    // Makes sure the info I need exists.
+    if (!user) {
+        return new Response(
+            JSON.stringify({
+                status: 400,
+                message: 'User object not found in request.'
+            }),
+            { headers: { "Content-Type": "application/json" } },
+        )
+    }
 
   // TODO: connect to PCO API.
 
@@ -25,10 +25,10 @@ serve(async (req) => {
 
   // TODO: Update user via PCO API.
 
-  return new Response(
-    JSON.stringify(user),
-    { headers: { "Content-Type": "application/json" } },
-  )
+    return new Response(
+        JSON.stringify(user),
+        { headers: { "Content-Type": "application/json" } },
+    )
 })
 
 // To invoke:
