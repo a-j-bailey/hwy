@@ -2,10 +2,10 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 serve(async (req) => {
-    const { data } = await req.json()
+    const { type, time, data } = await req.json()
     const user = data['user'];
 
     // Makes sure the info I need exists.
@@ -19,14 +19,24 @@ serve(async (req) => {
         )
     }
 
-  // TODO: connect to PCO API.
+    console.log('Event: ' + type + ' @ ' + time);
 
-  // TODO: fetch user from PCO API.
+    // TODO: connect to PCO API.
+    const response = await fetch('https://api.planningcenteronline.com/people/v2/people', {
+        method:'GET',
+        headers: {
+            Authorization: 'Basic'+Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET')
+        },
+    });
+    
+    console.log(response)
 
-  // TODO: Update user via PCO API.
+    // TODO: fetch user from PCO API.
+
+    // TODO: Update user via PCO API.
 
     return new Response(
-        JSON.stringify(user),
+        JSON.stringify(response),
         { headers: { "Content-Type": "application/json" } },
     )
 })
