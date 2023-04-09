@@ -4,6 +4,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// Future-me problems:
+// TODO: PCO might return multiple people with matching email addresses.
+
 serve(async (req) => {
     const { type, time, data } = await req.json()
     const user = data['user'];
