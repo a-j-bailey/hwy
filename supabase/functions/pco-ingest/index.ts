@@ -20,23 +20,23 @@ serve(async (req) => {
     }
 
     console.log('Event: ' + type + ' @ ' + time);
+    
+    // Build Query URL:
+    const url = 'https://api.planningcenteronline.com/people/v2/people?where[search_name_or_email]='+user['email'];
 
-    // TODO: connect to PCO API.
-    const response = await fetch('https://api.planningcenteronline.com/people/v2/people', {
+    // Query PCO By Person:
+    const response = await fetch(url, {
         method:'GET',
         headers: {
-            Authorization: 'Basic'+Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET')
+            Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
         },
     });
-    
-    console.log(response)
-
-    // TODO: fetch user from PCO API.
+    const pcoData = await response.json();
 
     // TODO: Update user via PCO API.
 
     return new Response(
-        JSON.stringify(response),
+        JSON.stringify(pcoData),
         { headers: { "Content-Type": "application/json" } },
     )
 })
