@@ -10,6 +10,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 serve(async (req) => {
     const { type, time, data } = await req.json()
     const user = data['user'];
+    const field_definition_id = '632202';
+    
+    let date = new Date(time);
+    
+    const yyyy = date.getFullYear();
+    let mm = date.getMonth() + 1;
+    let dd = date.getDate();
+    if (dd < 10) dd = '0' + dd;
+    if (mm < 10) mm = '0' + mm;
+    const formattedDate = mm + '/' + dd + '/' + yyyy;
 
     // Makes sure the info I need exists.
     if (!user) {
@@ -25,7 +35,7 @@ serve(async (req) => {
     console.log('Event: ' + type + ' @ ' + time);
     
     // Build Query URL:
-    const url = 'https://api.planningcenteronline.com/people/v2/people?where[search_name_or_email]='+user['email'];
+    let url = 'https://api.planningcenteronline.com/people/v2/people?where[search_name_or_email]='+user['email'];
 
     // Query PCO By Person:
     const response = await fetch(url, {
@@ -34,12 +44,50 @@ serve(async (req) => {
             Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
         },
     });
-    const pcoData = await response.json();
+    const pcoResp = await response.json();
+    
+    let message = '';
+    
+    // If PCO returned at least one person.
+    if (pcoResp['data'].length) {
+        message = 'Person found with email: '+user['email']
 
-    // TODO: Update user via PCO API.
+//        const person = pcoResp['data'][0];
+//        
+//        url = 'https://api.planningcenteronline.com/people//v2/people/'+person['id']+'/field_data';
+//        
+//        console.log(formattedDate);
+        
+//        const response = await fetch(url, {
+//            method:'POST',
+//            headers: {
+//                Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
+//            },
+//            body: JSON.stringify({
+//                "data": {
+//                    "attributes": {
+//                        "field_definition_id": field_definition_id,
+//                        "value": formattedDate
+//                    }
+//                }
+//            }),
+//        });
+
+        
+        // Person is found. 
+        // TODO: Update user.
+    } else {
+        message = 'Person not found with email: '+user['email']
+        // Person not with / email. 
+        // TODO: search by name (or other factor)?
+        // TODO: Create new person if still not found.
+    }
 
     return new Response(
-        JSON.stringify(pcoData),
+        JSON.stringify({
+                status: 200,
+                message: message
+            }),
         { headers: { "Content-Type": "application/json" } },
     )
 })
