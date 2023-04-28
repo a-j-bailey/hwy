@@ -3,9 +3,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // Future-me problems:
 // TODO: PCO might return multiple people with matching email addresses?
 // TODO: If the person doesn't exist. Should we add them?
-// TODO: Integrate with LogSnag
+// TODO: Make smarter to handle different types of events.
 
 serve(async (req) => {
+    
     // INIT data.
     const { type, time, data } = await req.json()
     const user = data['user'];
@@ -14,7 +15,7 @@ serve(async (req) => {
     const headers = {
         Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
     };
-    
+
     let message = '';
     let status = 200;
 
@@ -39,7 +40,7 @@ serve(async (req) => {
         )
     }
 
-    console.log('Event: ' + type + ' @ ' + time);
+//    console.log('Event: ' + type + ' @ ' + time);
     
     // Build Query URL:
     let url = 'https://api.planningcenteronline.com/people/v2/people?where[search_name_or_email]='+user['email'];
@@ -54,8 +55,6 @@ serve(async (req) => {
     
     // If PCO returned at least one person.
     if (pcoResp.data.length) {
-        message = 'Person found with email: '+user['email'];
-
         // For now we're just using the first person returned.
         const personFields = await fetch(pcoResp.data[0].links.self+'/field_data', {method:'GET', headers: headers,});
         const fields = await personFields.json();
@@ -78,13 +77,44 @@ serve(async (req) => {
                 body: JSON.stringify({"data": {"attributes": {"value": formattedDate}}}),
             });
         } else {
-            console.log('Field not found');
+            const update = await fetch(pcoResp.data[0].links.self+'/field_data', {
+                method:'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    "data": {
+                        "attributes": {
+                            "field_definition_id": 632202,
+                            "value": formattedDate
+                        }
+                    }
+                }),
+            });
         }
+        message = 'Updated ChurchOnline attendance for '+user['email'];
+        
+//        const update = await fetch('https://api.logsnag.com/v1/log', {
+//            method:'POST',
+//            headers: {
+//                'Authorization': 'Bearer '+Deno.env.get('LOGSNAG_TOKEN'),
+//                'Content-Type': 'application/json'
+//            },
+//            body: JSON.stringify({
+//                "project": "church-online",
+//                "channel": "service-attended",
+//                "event": "User Attended",
+//                "description": "email: "+user['email'],
+//                "icon": "🔥",
+//                "notify": true,
+//                "tags": {
+//                    "email": user['email'],
+//                }
+//            }),
+//        });
     } else {
-        message = 'Person not found with email: '+user['email']
+        message = 'Person not found with email: '+user['nickname']
         // Person not with / email. 
         // TODO: search by name (or other factor)?
-        // TODO: Create new person if still not found.
+        // TODO: Create new person if still not found?
     }
 
     return new Response(
