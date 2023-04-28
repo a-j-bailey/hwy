@@ -1,25 +1,15 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Future-me problems:
 // TODO: PCO might return multiple people with matching email addresses?
+// TODO: If the person doesn't exist. Should we add them?
+// TODO: Integrate with LogSnag
 
 serve(async (req) => {
+    // INIT data.
     const { type, time, data } = await req.json()
     const user = data['user'];
     const field_definition_id = '632202';
-    
-    let date = new Date(time);
-    
-    const yyyy = date.getFullYear();
-    let mm = date.getMonth() + 1;
-    let dd = date.getDate();
-    if (dd < 10) dd = '0' + dd;
-    if (mm < 10) mm = '0' + mm;
-    const formattedDate = yyyy + '-' + mm + '-' + dd;
     
     const headers = {
         Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
@@ -27,6 +17,16 @@ serve(async (req) => {
     
     let message = '';
     let status = 200;
+
+    let date = new Date(time);
+    
+    // Parse date.
+    const yyyy = date.getFullYear();
+    let mm = date.getMonth() + 1;
+    let dd = date.getDate();
+    if (dd < 10) dd = '0' + dd;
+    if (mm < 10) mm = '0' + mm;
+    const formattedDate = yyyy + '-' + mm + '-' + dd;
 
     // Makes sure the info I need exists.
     if (!user) {
@@ -56,33 +56,26 @@ serve(async (req) => {
     if (pcoResp.data.length) {
         message = 'Person found with email: '+user['email'];
 
-        const person = pcoResp.data[0];
-
-        const personFields = await fetch(person.links.self+'/field_data', {method:'GET', headers: headers,});
-        
+        // For now we're just using the first person returned.
+        const personFields = await fetch(pcoResp.data[0].links.self+'/field_data', {method:'GET', headers: headers,});
         const fields = await personFields.json();
         
         let field = null;
         
+        // Check all custom fields on that person looking for Church Online Attendance.
         fields.data.forEach( (fieldDatum) => {
             if (fieldDatum.relationships.field_definition.data.id == '632202') {
                 field = fieldDatum;
             }
         })
-        
+
+        // If the field was found.
         if (field) {
+            // Update the field with PATCH.
             const update = await fetch(field.links.self, {
                 method:'PATCH',
-                headers: {
-                    Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
-                },
-                body: JSON.stringify({
-                    "data": {
-                        "attributes": {
-                            "value": formattedDate
-                        },
-                    }
-                }),
+                headers: headers,
+                body: JSON.stringify({"data": {"attributes": {"value": formattedDate}}}),
             });
         } else {
             console.log('Field not found');
@@ -102,9 +95,3 @@ serve(async (req) => {
         { headers: { "Content-Type": "application/json" } },
     )
 })
-
-// To invoke:
-// curl -i --location --request POST 'http://localhost:54321/functions/v1/' \
-//   --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-//   --header 'Content-Type: application/json' \
-//   --data '{"name":"Functions"}'
