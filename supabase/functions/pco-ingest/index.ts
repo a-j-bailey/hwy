@@ -5,7 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Future-me problems:
-// TODO: PCO might return multiple people with matching email addresses.
+// TODO: PCO might return multiple people with matching email addresses?
 
 serve(async (req) => {
     const { type, time, data } = await req.json()
@@ -19,7 +19,14 @@ serve(async (req) => {
     let dd = date.getDate();
     if (dd < 10) dd = '0' + dd;
     if (mm < 10) mm = '0' + mm;
-    const formattedDate = mm + '/' + dd + '/' + yyyy;
+    const formattedDate = yyyy + '-' + mm + '-' + dd;
+    
+    const headers = {
+        Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
+    };
+    
+    let message = '';
+    let status = 200;
 
     // Makes sure the info I need exists.
     if (!user) {
@@ -36,46 +43,50 @@ serve(async (req) => {
     
     // Build Query URL:
     let url = 'https://api.planningcenteronline.com/people/v2/people?where[search_name_or_email]='+user['email'];
-
+    
     // Query PCO By Person:
     const response = await fetch(url, {
         method:'GET',
-        headers: {
-            Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
-        },
+        headers: headers,
     });
-    const pcoResp = await response.json();
     
-    let message = '';
+    let pcoResp = await response.json();
     
     // If PCO returned at least one person.
-    if (pcoResp['data'].length) {
-        message = 'Person found with email: '+user['email']
+    if (pcoResp.data.length) {
+        message = 'Person found with email: '+user['email'];
 
-//        const person = pcoResp['data'][0];
-//        
-//        url = 'https://api.planningcenteronline.com/people//v2/people/'+person['id']+'/field_data';
-//        
-//        console.log(formattedDate);
-        
-//        const response = await fetch(url, {
-//            method:'POST',
-//            headers: {
-//                Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
-//            },
-//            body: JSON.stringify({
-//                "data": {
-//                    "attributes": {
-//                        "field_definition_id": field_definition_id,
-//                        "value": formattedDate
-//                    }
-//                }
-//            }),
-//        });
+        const person = pcoResp.data[0];
 
+        const personFields = await fetch(person.links.self+'/field_data', {method:'GET', headers: headers,});
         
-        // Person is found. 
-        // TODO: Update user.
+        const fields = await personFields.json();
+        
+        let field = null;
+        
+        fields.data.forEach( (fieldDatum) => {
+            if (fieldDatum.relationships.field_definition.data.id == '632202') {
+                field = fieldDatum;
+            }
+        })
+        
+        if (field) {
+            const update = await fetch(field.links.self, {
+                method:'PATCH',
+                headers: {
+                    Authorization: 'Basic '+btoa(Deno.env.get('PCO_APP_ID')+':'+Deno.env.get('PCO_APP_SECRET'))
+                },
+                body: JSON.stringify({
+                    "data": {
+                        "attributes": {
+                            "value": formattedDate
+                        },
+                    }
+                }),
+            });
+        } else {
+            console.log('Field not found');
+        }
     } else {
         message = 'Person not found with email: '+user['email']
         // Person not with / email. 
@@ -85,7 +96,7 @@ serve(async (req) => {
 
     return new Response(
         JSON.stringify({
-                status: 200,
+                status: status,
                 message: message
             }),
         { headers: { "Content-Type": "application/json" } },
