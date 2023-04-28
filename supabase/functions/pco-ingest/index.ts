@@ -6,7 +6,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // TODO: Make smarter to handle different types of events.
 
 serve(async (req) => {
-    
     // INIT data.
     const { type, time, data } = await req.json()
     const user = data['user'];
@@ -92,24 +91,24 @@ serve(async (req) => {
         }
         message = 'Updated ChurchOnline attendance for '+user['email'];
         
-//        const update = await fetch('https://api.logsnag.com/v1/log', {
-//            method:'POST',
-//            headers: {
-//                'Authorization': 'Bearer '+Deno.env.get('LOGSNAG_TOKEN'),
-//                'Content-Type': 'application/json'
-//            },
-//            body: JSON.stringify({
-//                "project": "church-online",
-//                "channel": "service-attended",
-//                "event": "User Attended",
-//                "description": "email: "+user['email'],
-//                "icon": "🔥",
-//                "notify": true,
-//                "tags": {
-//                    "email": user['email'],
-//                }
-//            }),
-//        });
+        const update = await fetch('https://api.logsnag.com/v1/log', {
+            method:'POST',
+            headers: {
+                'Authorization': 'Bearer '+Deno.env.get('LOGSNAG_TOKEN'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                "project": "church-online",
+                "channel": "service-attended",
+                "event": "User Attended",
+                "description": "email: "+user['email'],
+                "icon": "🔥",
+                "notify": true,
+                "tags": {
+                    "email": user['email'],
+                }
+            }),
+        });
     } else {
         message = 'Person not found with email: '+user['nickname']
         // Person not with / email. 
