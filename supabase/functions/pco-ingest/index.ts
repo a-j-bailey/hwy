@@ -7,8 +7,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 serve(async (req) => {
     // INIT data.
-    const { type, time, data } = await req.json()
+    const { type, data } = await req.json()
     const user = data['user'];
+    const time = data['timestamp'];
     const field_definition_id = '632202';
     
     const headers = {
